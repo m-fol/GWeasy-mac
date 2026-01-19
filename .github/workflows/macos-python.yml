@@ -1,4 +1,4 @@
-name: GWeasy Fetch Benchmark (macOS)
+name: GWeasy macOS Performance Check
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  benchmark:
+  benchmark-mac:
     runs-on: macos-latest
 
     steps:
@@ -24,43 +24,54 @@ jobs:
       - name: Install Pip Dependencies
         shell: bash -l {0}
         run: |
+          # Per your instructions: Option 2 setup
           pip install -r requirements.txt
 
-      - name: Benchmark GWeasy Fetch Logic
+      - name: Benchmark Noise Fetch
         shell: bash -l {0}
         run: |
-          echo "Starting Benchmark..."
+          export PYTHONPATH=$PYTHONPATH:.
+          
+          echo "Starting Benchmark on macOS..."
           
           python << 'EOF'
-          import time
+          import os
           import sys
+          import time
           from unittest.mock import MagicMock
 
           import tkinter as tk
           tk.Tk = MagicMock()
+          tk.Toplevel = MagicMock()
           tk.mainloop = MagicMock()
 
           try:
               import gweasy
-              print("Successfully imported GWeasy logic.")
-          except Exception as e:
-              print(f"Import failed: {e}")
+              print("Successfully linked to gweasy.py logic.")
+          except ImportError as e:
+              print(f"Error: Could not find gweasy.py in {os.getcwd()}")
+              print(f"Path searched: {sys.path}")
               sys.exit(1)
-              
-          detector = 'H1'
-          start = 1126259446
-          end = 1126259478
-
-          print(f"Fetching {end-start} seconds of noise from {detector}...")
 
           from gwpy.timeseries import TimeSeries
           
-          start_timer = time.time()
+          detector = 'H1'
+          start = 1126259446 
+          end = 1126259478 
+          
+          print(f"Commencing fetch of {detector} data...")
+          
+          start_time = time.time()
           data = TimeSeries.fetch_open_data(detector, start, end)
-          end_timer = time.time()
-
-          print(f"\n--- BENCHMARK RESULTS ---")
-          print(f"Fetch Duration: {round(end_timer - start_timer, 4)} seconds")
-          print(f"Data Points Retrieved: {len(data)}")
-          print(f"-------------------------")
+          end_time = time.time()
+          
+          duration = end_time - start_time
+          
+          print("\n" + "="*30)
+          print("MACOS PERFORMANCE RESULTS")
+          print("="*30)
+          print(f"Software: GWeasy-mac")
+          print(f"Fetch Time: {duration:.4f} seconds")
+          print(f"Data Rate: {len(data)/duration:.2f} samples/sec")
+          print("="*30)
           EOF
