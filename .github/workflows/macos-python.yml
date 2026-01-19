@@ -1,31 +1,66 @@
-name: macOS Python CI
+name: GWeasy Fetch Benchmark (macOS)
 
 on:
   push:
-  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-  test:
+  benchmark:
     runs-on: macos-latest
 
-    strategy:
-      matrix:
-        python-version: ["3.10", "3.11"]
-
     steps:
-      - name: Checkout code
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v3
         with:
-          python-version: ${{ matrix.python-version }}
+          activate-environment: GWeasy
+          environment-file: environment.yml
+          python-version: "3.10"
+          auto-activate-base: false
 
-      - name: Install dependencies
+      - name: Install Pip Dependencies
+        shell: bash -l {0}
         run: |
-          python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Basic import test
+      - name: Benchmark GWeasy Fetch Logic
+        shell: bash -l {0}
         run: |
-          python -c "import sys; print(sys.version)"
+          echo "Starting Benchmark..."
+          
+          python << 'EOF'
+          import time
+          import sys
+          from unittest.mock import MagicMock
+
+          import tkinter as tk
+          tk.Tk = MagicMock()
+          tk.mainloop = MagicMock()
+
+          try:
+              import gweasy
+              print("Successfully imported GWeasy logic.")
+          except Exception as e:
+              print(f"Import failed: {e}")
+              sys.exit(1)
+              
+          detector = 'H1'
+          start = 1126259446
+          end = 1126259478
+
+          print(f"Fetching {end-start} seconds of noise from {detector}...")
+
+          from gwpy.timeseries import TimeSeries
+          
+          start_timer = time.time()
+          data = TimeSeries.fetch_open_data(detector, start, end)
+          end_timer = time.time()
+
+          print(f"\n--- BENCHMARK RESULTS ---")
+          print(f"Fetch Duration: {round(end_timer - start_timer, 4)} seconds")
+          print(f"Data Points Retrieved: {len(data)}")
+          print(f"-------------------------")
+          EOF
