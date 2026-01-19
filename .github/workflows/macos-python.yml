@@ -1,4 +1,4 @@
-name: GWeasy macOS Performance Check
+name: GWeasy macOS Fetch Benchmark
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  benchmark-mac:
+  benchmark:
     runs-on: macos-latest
 
     steps:
@@ -18,60 +18,48 @@ jobs:
         with:
           activate-environment: GWeasy
           environment-file: environment.yml
-          python-version: "3.10"
           auto-activate-base: false
 
       - name: Install Pip Dependencies
         shell: bash -l {0}
         run: |
-          # Per your instructions: Option 2 setup
           pip install -r requirements.txt
 
-      - name: Benchmark Noise Fetch
+      - name: Benchmark Noise Fetching Time
         shell: bash -l {0}
         run: |
-          export PYTHONPATH=$PYTHONPATH:.
-          
-          echo "Starting Benchmark on macOS..."
+          echo "Starting the benchmark using the GWeasy environment..."
           
           python << 'EOF'
-          import os
-          import sys
           import time
-          from unittest.mock import MagicMock
-
-          import tkinter as tk
-          tk.Tk = MagicMock()
-          tk.Toplevel = MagicMock()
-          tk.mainloop = MagicMock()
+          import sys
+          import os
 
           try:
-              import gweasy
-              print("Successfully linked to gweasy.py logic.")
-          except ImportError as e:
-              print(f"Error: Could not find gweasy.py in {os.getcwd()}")
-              print(f"Path searched: {sys.path}")
+              from gwpy.timeseries import TimeSeries
+              print("GWpy library loaded successfully.")
+          except ImportError:
+              print("Failed to load dependencies. Check requirements.txt.")
               sys.exit(1)
-
-          from gwpy.timeseries import TimeSeries
-          
+              
           detector = 'H1'
-          start = 1126259446 
-          end = 1126259478 
+          t0 = 1126259446
+          t1 = 1126259478
+
+          print(f"Fetching {t1-t0}s of noise data from {detector}...")
+
+          start_clock = time.time()
+
+          data = TimeSeries.fetch_open_data(detector, t0, t1)
           
-          print(f"Commencing fetch of {detector} data...")
-          
-          start_time = time.time()
-          data = TimeSeries.fetch_open_data(detector, start, end)
-          end_time = time.time()
-          
-          duration = end_time - start_time
-          
-          print("\n" + "="*30)
-          print("MACOS PERFORMANCE RESULTS")
-          print("="*30)
-          print(f"Software: GWeasy-mac")
-          print(f"Fetch Time: {duration:.4f} seconds")
-          print(f"Data Rate: {len(data)/duration:.2f} samples/sec")
-          print("="*30)
+          end_clock = time.time()
+
+          duration = end_clock - start_clock
+          print("\n" + "="*35)
+          print(f"MACOS FETCH BENCHMARK COMPLETE")
+          print("="*35)
+          print(f"Time Taken: {duration:.4f} seconds")
+          print(f"Data Points: {len(data)}")
+          print(f"Fetch Speed: {len(data)/duration:.2f} samples/sec")
+          print("="*35)
           EOF
